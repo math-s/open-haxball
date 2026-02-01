@@ -45,23 +45,67 @@ impl GameMap {
             // Top wall
             Line::new(Vec2::new(0.0, 0.0), Vec2::new(width, 0.0), WALL_RESTITUTION),
             // Bottom wall
-            Line::new(Vec2::new(0.0, height), Vec2::new(width, height), WALL_RESTITUTION),
+            Line::new(
+                Vec2::new(0.0, height),
+                Vec2::new(width, height),
+                WALL_RESTITUTION,
+            ),
             // Left wall (above goal)
-            Line::new(Vec2::new(0.0, 0.0), Vec2::new(0.0, goal_top), WALL_RESTITUTION),
+            Line::new(
+                Vec2::new(0.0, 0.0),
+                Vec2::new(0.0, goal_top),
+                WALL_RESTITUTION,
+            ),
             // Left wall (below goal)
-            Line::new(Vec2::new(0.0, goal_bottom), Vec2::new(0.0, height), WALL_RESTITUTION),
+            Line::new(
+                Vec2::new(0.0, goal_bottom),
+                Vec2::new(0.0, height),
+                WALL_RESTITUTION,
+            ),
             // Right wall (above goal)
-            Line::new(Vec2::new(width, 0.0), Vec2::new(width, goal_top), WALL_RESTITUTION),
+            Line::new(
+                Vec2::new(width, 0.0),
+                Vec2::new(width, goal_top),
+                WALL_RESTITUTION,
+            ),
             // Right wall (below goal)
-            Line::new(Vec2::new(width, goal_bottom), Vec2::new(width, height), WALL_RESTITUTION),
+            Line::new(
+                Vec2::new(width, goal_bottom),
+                Vec2::new(width, height),
+                WALL_RESTITUTION,
+            ),
             // Red goal (left side) walls
-            Line::new(Vec2::new(-goal_depth, goal_top), Vec2::new(0.0, goal_top), WALL_RESTITUTION),
-            Line::new(Vec2::new(-goal_depth, goal_bottom), Vec2::new(0.0, goal_bottom), WALL_RESTITUTION),
-            Line::new(Vec2::new(-goal_depth, goal_top), Vec2::new(-goal_depth, goal_bottom), WALL_RESTITUTION),
+            Line::new(
+                Vec2::new(-goal_depth, goal_top),
+                Vec2::new(0.0, goal_top),
+                WALL_RESTITUTION,
+            ),
+            Line::new(
+                Vec2::new(-goal_depth, goal_bottom),
+                Vec2::new(0.0, goal_bottom),
+                WALL_RESTITUTION,
+            ),
+            Line::new(
+                Vec2::new(-goal_depth, goal_top),
+                Vec2::new(-goal_depth, goal_bottom),
+                WALL_RESTITUTION,
+            ),
             // Blue goal (right side) walls
-            Line::new(Vec2::new(width, goal_top), Vec2::new(width + goal_depth, goal_top), WALL_RESTITUTION),
-            Line::new(Vec2::new(width, goal_bottom), Vec2::new(width + goal_depth, goal_bottom), WALL_RESTITUTION),
-            Line::new(Vec2::new(width + goal_depth, goal_top), Vec2::new(width + goal_depth, goal_bottom), WALL_RESTITUTION),
+            Line::new(
+                Vec2::new(width, goal_top),
+                Vec2::new(width + goal_depth, goal_top),
+                WALL_RESTITUTION,
+            ),
+            Line::new(
+                Vec2::new(width, goal_bottom),
+                Vec2::new(width + goal_depth, goal_bottom),
+                WALL_RESTITUTION,
+            ),
+            Line::new(
+                Vec2::new(width + goal_depth, goal_top),
+                Vec2::new(width + goal_depth, goal_bottom),
+                WALL_RESTITUTION,
+            ),
         ];
 
         Self {

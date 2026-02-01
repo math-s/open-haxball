@@ -45,7 +45,11 @@ pub struct Line {
 
 impl Line {
     pub fn new(p1: Vec2, p2: Vec2, restitution: f32) -> Self {
-        Self { p1, p2, restitution }
+        Self {
+            p1,
+            p2,
+            restitution,
+        }
     }
 }
 
@@ -55,14 +59,7 @@ mod tests {
 
     #[test]
     fn test_circle_new() {
-        let circle = Circle::new(
-            Vec2::new(10.0, 20.0),
-            15.0,
-            2.0,
-            0.8,
-            0.99,
-            false,
-        );
+        let circle = Circle::new(Vec2::new(10.0, 20.0), 15.0, 2.0, 0.8, 0.99, false);
 
         assert_eq!(circle.position.x, 10.0);
         assert_eq!(circle.position.y, 20.0);
@@ -93,14 +90,7 @@ mod tests {
 
     #[test]
     fn test_circle_clone() {
-        let circle = Circle::new(
-            Vec2::new(10.0, 20.0),
-            15.0,
-            2.0,
-            0.8,
-            0.99,
-            false,
-        );
+        let circle = Circle::new(Vec2::new(10.0, 20.0), 15.0, 2.0, 0.8, 0.99, false);
         let cloned = circle.clone();
 
         assert_eq!(circle.position.x, cloned.position.x);
@@ -110,11 +100,7 @@ mod tests {
 
     #[test]
     fn test_line_new() {
-        let line = Line::new(
-            Vec2::new(0.0, 0.0),
-            Vec2::new(100.0, 50.0),
-            0.9,
-        );
+        let line = Line::new(Vec2::new(0.0, 0.0), Vec2::new(100.0, 50.0), 0.9);
 
         assert_eq!(line.p1.x, 0.0);
         assert_eq!(line.p1.y, 0.0);
@@ -125,11 +111,7 @@ mod tests {
 
     #[test]
     fn test_line_clone() {
-        let line = Line::new(
-            Vec2::new(0.0, 0.0),
-            Vec2::new(100.0, 50.0),
-            0.9,
-        );
+        let line = Line::new(Vec2::new(0.0, 0.0), Vec2::new(100.0, 50.0), 0.9);
         let cloned = line.clone();
 
         assert_eq!(line.p1.x, cloned.p1.x);

@@ -86,8 +86,16 @@ fn test_team_balancing_with_many_players() {
     }
 
     // Count teams
-    let red_count = game.players.values().filter(|p| p.team == Team::Red).count();
-    let blue_count = game.players.values().filter(|p| p.team == Team::Blue).count();
+    let red_count = game
+        .players
+        .values()
+        .filter(|p| p.team == Team::Red)
+        .count();
+    let blue_count = game
+        .players
+        .values()
+        .filter(|p| p.team == Team::Blue)
+        .count();
 
     // Should be balanced (3-3)
     assert_eq!(red_count, 3);
@@ -271,7 +279,10 @@ fn test_kick_exact_edge_of_range() {
 
     // Ball should have been kicked
     let ball_vel = game.world.circles[game.ball_index].velocity;
-    assert!(ball_vel.length() > 0.0, "Ball should be kicked at edge of range");
+    assert!(
+        ball_vel.length() > 0.0,
+        "Ball should be kicked at edge of range"
+    );
 }
 
 #[test]

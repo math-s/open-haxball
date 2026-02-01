@@ -19,7 +19,8 @@ fn test_client_message_round_trip_join() {
 
 #[test]
 fn test_client_message_round_trip_input() {
-    let json = r#"{"type":"input","data":{"left":true,"right":false,"up":true,"down":false,"kick":true}}"#;
+    let json =
+        r#"{"type":"input","data":{"left":true,"right":false,"up":true,"down":false,"kick":true}}"#;
     let msg: ClientMessage = serde_json::from_str(json).unwrap();
 
     match msg {
@@ -88,9 +89,9 @@ fn test_malformed_json_handling() {
         "not json",
         "{}",
         "{\"type\":\"unknown\"}",
-        "{\"type\":\"join\"}",              // Missing data
-        "{\"type\":\"join\",\"data\":{}}",  // Missing name
-        "{\"type\":\"input\"}",             // Missing data
+        "{\"type\":\"join\"}",             // Missing data
+        "{\"type\":\"join\",\"data\":{}}", // Missing name
+        "{\"type\":\"input\"}",            // Missing data
         "null",
         "[]",
         "123",
@@ -99,11 +100,7 @@ fn test_malformed_json_handling() {
 
     for input in invalid_inputs {
         let result: Result<ClientMessage, _> = serde_json::from_str(input);
-        assert!(
-            result.is_err(),
-            "Should have failed to parse: {}",
-            input
-        );
+        assert!(result.is_err(), "Should have failed to parse: {}", input);
     }
 }
 

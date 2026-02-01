@@ -46,7 +46,11 @@ impl Room {
             },
         );
 
-        println!("Client {} connected. Total clients: {}", client_id, self.clients.len());
+        println!(
+            "Client {} connected. Total clients: {}",
+            client_id,
+            self.clients.len()
+        );
         client_id
     }
 
@@ -63,7 +67,11 @@ impl Room {
                 println!("Player {} left", player_id);
             }
         }
-        println!("Client {} disconnected. Total clients: {}", client_id, self.clients.len());
+        println!(
+            "Client {} disconnected. Total clients: {}",
+            client_id,
+            self.clients.len()
+        );
     }
 
     pub fn handle_message(&mut self, client_id: usize, message: ClientMessage) {
@@ -160,7 +168,6 @@ impl Room {
         let state = self.game.serialize_state();
         self.broadcast(ServerMessage::State(state), None);
     }
-
 
     fn send(&self, client_id: usize, message: ServerMessage) {
         if let Some(client) = self.clients.get(&client_id) {

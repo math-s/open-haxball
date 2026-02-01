@@ -10,7 +10,11 @@ pub fn create_game_with_players(red: usize, blue: usize) -> Game {
     }
 
     for i in 0..blue {
-        game.add_player(format!("blue_{}", i), format!("BluePlayer{}", i), Team::Blue);
+        game.add_player(
+            format!("blue_{}", i),
+            format!("BluePlayer{}", i),
+            Team::Blue,
+        );
     }
 
     game
@@ -78,4 +82,3 @@ impl Default for InputBuilder {
         Self::new()
     }
 }
-

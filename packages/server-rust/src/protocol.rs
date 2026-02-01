@@ -136,10 +136,22 @@ mod tests {
     // GameStatus tests
     #[test]
     fn test_game_status_serialize() {
-        assert_eq!(serde_json::to_string(&GameStatus::Waiting).unwrap(), "\"waiting\"");
-        assert_eq!(serde_json::to_string(&GameStatus::Playing).unwrap(), "\"playing\"");
-        assert_eq!(serde_json::to_string(&GameStatus::Goal).unwrap(), "\"goal\"");
-        assert_eq!(serde_json::to_string(&GameStatus::Finished).unwrap(), "\"finished\"");
+        assert_eq!(
+            serde_json::to_string(&GameStatus::Waiting).unwrap(),
+            "\"waiting\""
+        );
+        assert_eq!(
+            serde_json::to_string(&GameStatus::Playing).unwrap(),
+            "\"playing\""
+        );
+        assert_eq!(
+            serde_json::to_string(&GameStatus::Goal).unwrap(),
+            "\"goal\""
+        );
+        assert_eq!(
+            serde_json::to_string(&GameStatus::Finished).unwrap(),
+            "\"finished\""
+        );
     }
 
     #[test]

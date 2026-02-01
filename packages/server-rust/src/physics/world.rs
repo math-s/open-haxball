@@ -114,25 +114,11 @@ mod tests {
     use super::*;
 
     fn create_circle(x: f32, y: f32, radius: f32) -> Circle {
-        Circle::new(
-            Vec2::new(x, y),
-            radius,
-            1.0,
-            0.8,
-            0.99,
-            false,
-        )
+        Circle::new(Vec2::new(x, y), radius, 1.0, 0.8, 0.99, false)
     }
 
     fn create_static_circle(x: f32, y: f32, radius: f32) -> Circle {
-        Circle::new(
-            Vec2::new(x, y),
-            radius,
-            1.0,
-            0.8,
-            0.99,
-            true,
-        )
+        Circle::new(Vec2::new(x, y), radius, 1.0, 0.8, 0.99, true)
     }
 
     #[test]
@@ -275,7 +261,10 @@ mod tests {
 
         // After collision, the circle should be pushed away from line
         // and velocity should be reversed (positive y, moving up)
-        assert!(world.circles[0].position.y > 0.0, "Circle should be above the line");
+        assert!(
+            world.circles[0].position.y > 0.0,
+            "Circle should be above the line"
+        );
     }
 
     #[test]
@@ -293,7 +282,9 @@ mod tests {
         world.step(PHYSICS_DT);
 
         // Circles should have collided and separated
-        let dist = world.circles[0].position.distance(world.circles[1].position);
+        let dist = world.circles[0]
+            .position
+            .distance(world.circles[1].position);
         assert!(dist >= 19.0); // Should be at least sum of radii (minus small tolerance)
     }
 

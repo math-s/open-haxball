@@ -37,9 +37,17 @@ fn test_circle_bounces_in_box() {
 
     // Create walls forming a box
     world.add_line(Line::new(Vec2::new(0.0, 0.0), Vec2::new(200.0, 0.0), 1.0)); // Top
-    world.add_line(Line::new(Vec2::new(0.0, 200.0), Vec2::new(200.0, 200.0), 1.0)); // Bottom
+    world.add_line(Line::new(
+        Vec2::new(0.0, 200.0),
+        Vec2::new(200.0, 200.0),
+        1.0,
+    )); // Bottom
     world.add_line(Line::new(Vec2::new(0.0, 0.0), Vec2::new(0.0, 200.0), 1.0)); // Left
-    world.add_line(Line::new(Vec2::new(200.0, 0.0), Vec2::new(200.0, 200.0), 1.0)); // Right
+    world.add_line(Line::new(
+        Vec2::new(200.0, 0.0),
+        Vec2::new(200.0, 200.0),
+        1.0,
+    )); // Right
 
     // Create a circle in the center with velocity
     let mut circle = create_circle(100.0, 100.0, 10.0);
@@ -62,7 +70,11 @@ fn test_high_speed_circle_does_not_tunnel() {
     let mut world = PhysicsWorld::new();
 
     // Create a wall
-    world.add_line(Line::new(Vec2::new(100.0, 0.0), Vec2::new(100.0, 200.0), 1.0));
+    world.add_line(Line::new(
+        Vec2::new(100.0, 0.0),
+        Vec2::new(100.0, 200.0),
+        1.0,
+    ));
 
     // Create a circle with very high velocity toward the wall
     let mut circle = create_circle(50.0, 100.0, 10.0);
@@ -78,7 +90,11 @@ fn test_high_speed_circle_does_not_tunnel() {
     // It should either be on the left side or have bounced back
     let pos = world.circles[0].position;
     // Due to velocity clamping and collision resolution, it should not tunnel
-    assert!(pos.x <= 100.0, "Circle tunneled through wall: x = {}", pos.x);
+    assert!(
+        pos.x <= 100.0,
+        "Circle tunneled through wall: x = {}",
+        pos.x
+    );
 }
 
 #[test]
@@ -185,9 +201,17 @@ fn test_many_circles_stress_test() {
 
     // Create a box
     world.add_line(Line::new(Vec2::new(0.0, 0.0), Vec2::new(500.0, 0.0), 0.9));
-    world.add_line(Line::new(Vec2::new(0.0, 500.0), Vec2::new(500.0, 500.0), 0.9));
+    world.add_line(Line::new(
+        Vec2::new(0.0, 500.0),
+        Vec2::new(500.0, 500.0),
+        0.9,
+    ));
     world.add_line(Line::new(Vec2::new(0.0, 0.0), Vec2::new(0.0, 500.0), 0.9));
-    world.add_line(Line::new(Vec2::new(500.0, 0.0), Vec2::new(500.0, 500.0), 0.9));
+    world.add_line(Line::new(
+        Vec2::new(500.0, 0.0),
+        Vec2::new(500.0, 500.0),
+        0.9,
+    ));
 
     // Add many circles with random-ish velocities
     for i in 0..20 {
@@ -207,14 +231,8 @@ fn test_many_circles_stress_test() {
 
         // All circles should have valid positions
         for circle in &world.circles {
-            assert!(
-                !circle.position.x.is_nan(),
-                "NaN position detected"
-            );
-            assert!(
-                !circle.position.y.is_nan(),
-                "NaN position detected"
-            );
+            assert!(!circle.position.x.is_nan(), "NaN position detected");
+            assert!(!circle.position.y.is_nan(), "NaN position detected");
         }
     }
 }

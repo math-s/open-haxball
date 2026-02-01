@@ -114,13 +114,29 @@ function init(): void {
 
   // Check for server selection via URL params
   const params = new URLSearchParams(window.location.search);
+  const customServer = params.get('server');
   const useRust = params.get('rust') === 'true';
-  const port = useRust ? 3001 : 3000;
-  const serverType = useRust ? 'Rust' : 'TypeScript';
 
-  // Server URL
-  const serverUrl = `ws://${window.location.hostname}:${port}`;
-  console.log(`Connecting to ${serverType} server on port ${port}`);
+  // Determine server URL based on environment
+  let serverUrl: string;
+  let serverType: string;
+
+  if (customServer) {
+    // Custom server from URL param
+    serverUrl = customServer.startsWith('ws') ? customServer : `wss://${customServer}`;
+    serverType = 'Custom';
+  } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // Local development
+    const port = useRust ? 3001 : 3000;
+    serverType = useRust ? 'Rust' : 'TypeScript';
+    serverUrl = `ws://${window.location.hostname}:${port}`;
+  } else {
+    // Production - connect to fly.io (https://open-haxball.fly.dev)
+    serverType = 'Rust (Fly.io)';
+    serverUrl = 'wss://open-haxball.fly.dev';
+  }
+
+  console.log(`Connecting to ${serverType} server: ${serverUrl}`);
 
   // Update UI to show server type
   const serverDisplay = document.getElementById('server-display');

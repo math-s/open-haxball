@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --format=esm --outfile=dist/bundle.js",
+    "build": "mkdir -p dist && esbuild src/index.ts --bundle --format=esm --outfile=dist/bundle.js --minify",
     "dev": "esbuild src/index.ts --bundle --format=esm --outfile=dist/bundle.js --servedir=. --serve=8080",
-    "start": "npx serve ."
+    "start": "npx serve .",
+    "preview": "npm run build && npx serve ."
   },
   "dependencies": {
     "@open-haxball/shared": "*"

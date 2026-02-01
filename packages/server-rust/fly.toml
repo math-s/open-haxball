@@ -11,19 +11,34 @@ primary_region = 'iad'
 [env]
   PORT = '3001'
 
-[http_service]
+[[services]]
+  protocol = "tcp"
   internal_port = 3001
-  auto_stop_machines = 'stop'
+  auto_stop_machines = "stop"
   auto_start_machines = true
   min_machines_running = 0
-  processes = ['app']
 
-  [[http_service.checks]]
-    interval = '15s'
-    timeout = '10s'
-    grace_period = '30s'
-    method = 'GET'
-    path = '/health'
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+    [services.ports.http_options]
+      h2_backend = false
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+    [services.ports.http_options]
+      h2_backend = false
+
+  [[services.http_checks]]
+    interval = "15s"
+    timeout = "10s"
+    grace_period = "30s"
+    method = "GET"
+    path = "/health"
 
 [[vm]]
   memory = '256mb'

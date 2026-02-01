@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Haxball</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #1a1a2e;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #4ecca3;
+    }
+
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #game-canvas {
+      border: 3px solid #4ecca3;
+      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(78, 204, 163, 0.3);
+    }
+
+    .info-bar {
+      display: flex;
+      justify-content: space-between;
+      width: 860px;
+      padding: 10px 0;
+    }
+
+    #team-display {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    #server-display {
+      font-size: 14px;
+      margin-left: 15px;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+    }
+
+    .controls {
+      font-size: 14px;
+      color: #888;
+    }
+
+    .controls span {
+      margin-left: 15px;
+    }
+
+    .controls kbd {
+      background: #333;
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>Open Haxball</h1>
+  <div class="game-container">
+    <div class="info-bar">
+      <div class="status-bar">
+        <div id="team-display">Connecting...</div>
+        <div id="server-display">Server: TypeScript</div>
+      </div>
+      <div class="controls">
+        <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or <kbd>Arrows</kbd> - Move</span>
+        <span><kbd>Space</kbd> or <kbd>X</kbd> - Kick</span>
+      </div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+  </div>
+  <script type="module" src="dist/bundle.js"></script>
+</body>
+</html>

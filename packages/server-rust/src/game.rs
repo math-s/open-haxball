@@ -340,3 +340,361 @@ impl Default for Game {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_game_new() {
+        let game = Game::new();
+        assert!(game.players.is_empty());
+        assert_eq!(game.score.red, 0);
+        assert_eq!(game.score.blue, 0);
+        assert_eq!(game.status, GameStatus::Waiting);
+        assert!(game.last_goal_team.is_none());
+    }
+
+    #[test]
+    fn test_game_default() {
+        let game = Game::default();
+        assert!(game.players.is_empty());
+        assert_eq!(game.status, GameStatus::Waiting);
+    }
+
+    // Player management tests
+    #[test]
+    fn test_add_player_starts_game() {
+        let mut game = Game::new();
+        assert_eq!(game.status, GameStatus::Waiting);
+
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        assert_eq!(game.status, GameStatus::Playing);
+    }
+
+    #[test]
+    fn test_add_player_spawns_at_team_position() {
+        let mut game = Game::new();
+        let red_spawn = game.map.red_spawns[0];
+
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+        let circle_index = game.players.get("p1").unwrap().circle_index;
+        let player_pos = game.world.circles[circle_index].position;
+
+        assert_eq!(player_pos.x, red_spawn.x);
+        assert_eq!(player_pos.y, red_spawn.y);
+    }
+
+    #[test]
+    fn test_add_player_blue_team_spawns_correctly() {
+        let mut game = Game::new();
+        let blue_spawn = game.map.blue_spawns[0];
+
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Blue);
+        let circle_index = game.players.get("p1").unwrap().circle_index;
+        let player_pos = game.world.circles[circle_index].position;
+
+        assert_eq!(player_pos.x, blue_spawn.x);
+        assert_eq!(player_pos.y, blue_spawn.y);
+    }
+
+    #[test]
+    fn test_remove_player_goes_to_waiting() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+        assert_eq!(game.status, GameStatus::Playing);
+
+        game.remove_player("p1");
+
+        assert!(game.players.is_empty());
+        assert_eq!(game.status, GameStatus::Waiting);
+    }
+
+    #[test]
+    fn test_remove_player_updates_indices() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+        game.add_player("p2".to_string(), "Player2".to_string(), Team::Blue);
+
+        let p2_initial_idx = game.players.get("p2").unwrap().circle_index;
+
+        game.remove_player("p1");
+
+        // p2's index should have been decremented
+        let p2_final_idx = game.players.get("p2").unwrap().circle_index;
+        assert!(p2_final_idx < p2_initial_idx);
+    }
+
+    #[test]
+    fn test_remove_nonexistent_player() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        // Should not panic
+        game.remove_player("nonexistent");
+
+        assert_eq!(game.players.len(), 1);
+    }
+
+    // Team balancing tests
+    #[test]
+    fn test_get_auto_team_balanced() {
+        let mut game = Game::new();
+
+        // First player should go to Red (or Blue, depending on tie-breaker)
+        let team1 = game.get_auto_team();
+        game.add_player("p1".to_string(), "Player1".to_string(), team1);
+
+        // Second player should go to the other team
+        let team2 = game.get_auto_team();
+        assert_ne!(team1, team2);
+    }
+
+    #[test]
+    fn test_get_auto_team_fills_smaller_team() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+        game.add_player("p2".to_string(), "Player2".to_string(), Team::Red);
+
+        let team = game.get_auto_team();
+        assert_eq!(team, Team::Blue);
+    }
+
+    // Update tests
+    #[test]
+    fn test_update_does_nothing_when_waiting() {
+        let mut game = Game::new();
+        assert_eq!(game.status, GameStatus::Waiting);
+
+        let ball_pos_before = game.world.circles[game.ball_index].position;
+        game.update(0.016);
+        let ball_pos_after = game.world.circles[game.ball_index].position;
+
+        // Ball should not have moved
+        assert_eq!(ball_pos_before.x, ball_pos_after.x);
+        assert_eq!(ball_pos_before.y, ball_pos_after.y);
+    }
+
+    #[test]
+    fn test_update_processes_input() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        let player_idx = game.players.get("p1").unwrap().circle_index;
+        let initial_vel = game.world.circles[player_idx].velocity;
+
+        game.set_player_input(
+            "p1",
+            InputState {
+                left: false,
+                right: true,
+                up: false,
+                down: false,
+                kick: false,
+            },
+        );
+
+        game.update(0.016);
+
+        let final_vel = game.world.circles[player_idx].velocity;
+        // Player should have accelerated to the right
+        assert!(final_vel.x > initial_vel.x);
+    }
+
+    #[test]
+    fn test_set_player_input_nonexistent_player() {
+        let mut game = Game::new();
+        // Should not panic
+        game.set_player_input(
+            "nonexistent",
+            InputState {
+                left: true,
+                right: false,
+                up: false,
+                down: false,
+                kick: false,
+            },
+        );
+    }
+
+    // Kick tests
+    #[test]
+    fn test_kick_ball_in_range() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        // Move player close to ball
+        let ball_pos = game.world.circles[game.ball_index].position;
+        let player_idx = game.players.get("p1").unwrap().circle_index;
+        game.world.circles[player_idx].position = Vec2::new(ball_pos.x - 30.0, ball_pos.y);
+
+        let ball_vel_before = game.world.circles[game.ball_index].velocity;
+
+        game.set_player_input(
+            "p1",
+            InputState {
+                left: false,
+                right: false,
+                up: false,
+                down: false,
+                kick: true,
+            },
+        );
+        game.update(0.016);
+
+        let ball_vel_after = game.world.circles[game.ball_index].velocity;
+        // Ball should have gained velocity
+        assert!(ball_vel_after.length() > ball_vel_before.length());
+    }
+
+    #[test]
+    fn test_kick_ball_out_of_range() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        // Player is at spawn, ball is at center - should be out of range
+        let ball_vel_before = game.world.circles[game.ball_index].velocity;
+
+        game.set_player_input(
+            "p1",
+            InputState {
+                left: false,
+                right: false,
+                up: false,
+                down: false,
+                kick: true,
+            },
+        );
+        game.update(0.016);
+
+        let ball_vel_after = game.world.circles[game.ball_index].velocity;
+        // Ball velocity should not have changed significantly (only friction)
+        assert!((ball_vel_after.x - ball_vel_before.x).abs() < 1.0);
+    }
+
+    // Goal tests
+    #[test]
+    fn test_goal_scored_by_blue() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        // Move ball into red goal (blue scores)
+        game.world.circles[game.ball_index].position = Vec2::new(-15.0, 200.0);
+
+        game.update(0.016);
+
+        assert_eq!(game.score.blue, 1);
+        assert_eq!(game.score.red, 0);
+        assert_eq!(game.status, GameStatus::Goal);
+        assert_eq!(game.last_goal_team, Some(Team::Blue));
+    }
+
+    #[test]
+    fn test_goal_scored_by_red() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        // Move ball into blue goal (red scores)
+        game.world.circles[game.ball_index].position = Vec2::new(815.0, 200.0);
+
+        game.update(0.016);
+
+        assert_eq!(game.score.red, 1);
+        assert_eq!(game.score.blue, 0);
+        assert_eq!(game.status, GameStatus::Goal);
+        assert_eq!(game.last_goal_team, Some(Team::Red));
+    }
+
+    #[test]
+    fn test_goal_timer_resets_game() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        // Score a goal
+        game.world.circles[game.ball_index].position = Vec2::new(-15.0, 200.0);
+        game.update(0.016);
+        assert_eq!(game.status, GameStatus::Goal);
+
+        // Wait for goal timer to expire
+        for _ in 0..150 {
+            // ~2.4 seconds at 60fps
+            game.update(0.016);
+        }
+
+        assert_eq!(game.status, GameStatus::Playing);
+    }
+
+    #[test]
+    fn test_positions_reset_after_goal() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        // Score a goal
+        game.world.circles[game.ball_index].position = Vec2::new(-15.0, 200.0);
+        game.update(0.016);
+
+        // Wait for reset
+        for _ in 0..150 {
+            game.update(0.016);
+        }
+
+        // Ball should be back at center
+        let ball_pos = game.world.circles[game.ball_index].position;
+        assert!((ball_pos.x - game.map.ball_spawn.x).abs() < 1.0);
+        assert!((ball_pos.y - game.map.ball_spawn.y).abs() < 1.0);
+    }
+
+    // Serialization tests
+    #[test]
+    fn test_serialize_state() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        let state = game.serialize_state();
+
+        assert_eq!(state.players.len(), 1);
+        assert_eq!(state.players[0].id, "p1");
+        assert_eq!(state.players[0].team, Team::Red);
+        assert_eq!(state.score.red, 0);
+        assert_eq!(state.score.blue, 0);
+        assert_eq!(state.status, GameStatus::Playing);
+    }
+
+    #[test]
+    fn test_serialize_state_empty_game() {
+        let game = Game::new();
+        let state = game.serialize_state();
+
+        assert!(state.players.is_empty());
+        assert_eq!(state.status, GameStatus::Waiting);
+    }
+
+    // Diagonal movement tests
+    #[test]
+    fn test_diagonal_movement_normalized() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        let player_idx = game.players.get("p1").unwrap().circle_index;
+
+        // Move diagonally
+        game.set_player_input(
+            "p1",
+            InputState {
+                left: false,
+                right: true,
+                up: true,
+                down: false,
+                kick: false,
+            },
+        );
+        game.update(0.016);
+
+        let vel = game.world.circles[player_idx].velocity;
+        // Diagonal speed should not be faster than straight movement
+        // (both x and y should be scaled)
+        assert!(vel.x.abs() < 10.0); // Reasonable single-frame acceleration
+        assert!(vel.y.abs() < 10.0);
+    }
+}

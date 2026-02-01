@@ -75,19 +75,9 @@ async fn handle_request(
     addr: SocketAddr,
     room: Arc<Mutex<Room>>,
 ) -> Result<Response<Full<Bytes>>, hyper::Error> {
-    // Health check endpoint
-    if req.uri().path() == "/" || req.uri().path() == "/health" {
-        if req.method() == hyper::Method::GET {
-            println!("Health check from {}", addr);
-            return Ok(Response::builder()
-                .status(StatusCode::OK)
-                .body(Full::new(Bytes::from("OK")))
-                .unwrap());
-        }
-    }
-
-    // Check for WebSocket upgrade
+    // Check for WebSocket upgrade FIRST (before health check)
     if hyper_tungstenite::is_upgrade_request(&req) {
+        println!("WebSocket upgrade request from {}", addr);
         let (response, websocket) = hyper_tungstenite::upgrade(&mut req, None).unwrap();
 
         tokio::spawn(async move {
@@ -97,6 +87,17 @@ async fn handle_request(
         });
 
         return Ok(response.map(|_| Full::new(Bytes::new())));
+    }
+
+    // Health check endpoint
+    if req.uri().path() == "/" || req.uri().path() == "/health" {
+        if req.method() == hyper::Method::GET {
+            println!("Health check from {}", addr);
+            return Ok(Response::builder()
+                .status(StatusCode::OK)
+                .body(Full::new(Bytes::from("OK")))
+                .unwrap());
+        }
     }
 
     // Not found

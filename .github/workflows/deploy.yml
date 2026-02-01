@@ -30,10 +30,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build shared package
+        run: npm run build:shared
+
       - name: Build client
-        run: |
-          cd packages/client
-          npm run build
+        run: npm run build:client
 
       - name: Prepare deployment files
         run: |

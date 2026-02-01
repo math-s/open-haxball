@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1.70 as builder
+FROM rust:1.84-slim AS builder
 WORKDIR /app
 COPY Cargo.toml Cargo.lock* ./
 COPY src ./src

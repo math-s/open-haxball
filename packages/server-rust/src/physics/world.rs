@@ -46,12 +46,12 @@ impl PhysicsWorld {
             }
 
             // Apply friction (velocity damping)
-            circle.velocity = circle.velocity.mul(circle.friction);
+            circle.velocity = circle.velocity * circle.friction;
 
             // Clamp max velocity to prevent tunneling
             let speed = circle.velocity.length();
             if speed > MAX_VELOCITY {
-                circle.velocity = circle.velocity.mul(MAX_VELOCITY / speed);
+                circle.velocity = circle.velocity * (MAX_VELOCITY / speed);
             }
         }
 

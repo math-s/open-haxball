@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Clone, Copy, Default, Debug, Serialize, Deserialize)]
 pub struct Vec2 {
@@ -9,34 +10,6 @@ pub struct Vec2 {
 impl Vec2 {
     pub fn new(x: f32, y: f32) -> Self {
         Self { x, y }
-    }
-
-    pub fn add(self, other: Self) -> Self {
-        Self {
-            x: self.x + other.x,
-            y: self.y + other.y,
-        }
-    }
-
-    pub fn sub(self, other: Self) -> Self {
-        Self {
-            x: self.x - other.x,
-            y: self.y - other.y,
-        }
-    }
-
-    pub fn mul(self, scalar: f32) -> Self {
-        Self {
-            x: self.x * scalar,
-            y: self.y * scalar,
-        }
-    }
-
-    pub fn div(self, scalar: f32) -> Self {
-        Self {
-            x: self.x / scalar,
-            y: self.y / scalar,
-        }
     }
 
     pub fn dot(self, other: Self) -> f32 {
@@ -56,12 +29,56 @@ impl Vec2 {
         if len == 0.0 {
             Self::default()
         } else {
-            self.div(len)
+            self / len
         }
     }
 
     pub fn distance(self, other: Self) -> f32 {
-        self.sub(other).length()
+        (self - other).length()
+    }
+}
+
+impl Add for Vec2 {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
+}
+
+impl Sub for Vec2 {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Self {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
+    }
+}
+
+impl Mul<f32> for Vec2 {
+    type Output = Self;
+
+    fn mul(self, scalar: f32) -> Self {
+        Self {
+            x: self.x * scalar,
+            y: self.y * scalar,
+        }
+    }
+}
+
+impl Div<f32> for Vec2 {
+    type Output = Self;
+
+    fn div(self, scalar: f32) -> Self {
+        Self {
+            x: self.x / scalar,
+            y: self.y / scalar,
+        }
     }
 }
 
@@ -87,7 +104,7 @@ mod tests {
     fn test_vec2_add() {
         let a = Vec2::new(1.0, 2.0);
         let b = Vec2::new(3.0, 4.0);
-        let result = a.add(b);
+        let result = a + b;
         assert_eq!(result.x, 4.0);
         assert_eq!(result.y, 6.0);
     }
@@ -96,7 +113,7 @@ mod tests {
     fn test_vec2_sub() {
         let a = Vec2::new(5.0, 7.0);
         let b = Vec2::new(2.0, 3.0);
-        let result = a.sub(b);
+        let result = a - b;
         assert_eq!(result.x, 3.0);
         assert_eq!(result.y, 4.0);
     }
@@ -104,7 +121,7 @@ mod tests {
     #[test]
     fn test_vec2_mul() {
         let v = Vec2::new(2.0, 3.0);
-        let result = v.mul(2.0);
+        let result = v * 2.0;
         assert_eq!(result.x, 4.0);
         assert_eq!(result.y, 6.0);
     }
@@ -112,7 +129,7 @@ mod tests {
     #[test]
     fn test_vec2_div() {
         let v = Vec2::new(6.0, 8.0);
-        let result = v.div(2.0);
+        let result = v / 2.0;
         assert_eq!(result.x, 3.0);
         assert_eq!(result.y, 4.0);
     }

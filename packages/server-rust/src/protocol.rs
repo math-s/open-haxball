@@ -26,16 +26,10 @@ pub struct InputState {
     pub kick: bool,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Default, Debug, Serialize)]
 pub struct Score {
     pub red: u32,
     pub blue: u32,
-}
-
-impl Default for Score {
-    fn default() -> Self {
-        Self { red: 0, blue: 0 }
-    }
 }
 
 // Client -> Server messages

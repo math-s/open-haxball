@@ -20,7 +20,7 @@ impl Default for CollisionResult {
 }
 
 pub fn circle_vs_circle(a: &Circle, b: &Circle) -> CollisionResult {
-    let diff = b.position.sub(a.position);
+    let diff = b.position - a.position;
     let dist = diff.length();
     let min_dist = a.radius + b.radius;
 
@@ -49,12 +49,12 @@ pub fn resolve_circle_vs_circle(a: &mut Circle, b: &mut Circle, result: &Collisi
     }
 
     // Separate circles
-    let correction = result.normal.mul(result.penetration / total_inv_mass);
-    a.position = a.position.sub(correction.mul(a.inv_mass));
-    b.position = b.position.add(correction.mul(b.inv_mass));
+    let correction = result.normal * (result.penetration / total_inv_mass);
+    a.position = a.position - correction * a.inv_mass;
+    b.position = b.position + correction * b.inv_mass;
 
     // Calculate relative velocity
-    let relative_velocity = b.velocity.sub(a.velocity);
+    let relative_velocity = b.velocity - a.velocity;
     let velocity_along_normal = relative_velocity.dot(result.normal);
 
     // Don't resolve if velocities are separating
@@ -69,18 +69,18 @@ pub fn resolve_circle_vs_circle(a: &mut Circle, b: &mut Circle, result: &Collisi
     let j = -(1.0 + e) * velocity_along_normal / total_inv_mass;
 
     // Apply impulse
-    let impulse = result.normal.mul(j);
-    a.velocity = a.velocity.sub(impulse.mul(a.inv_mass));
-    b.velocity = b.velocity.add(impulse.mul(b.inv_mass));
+    let impulse = result.normal * j;
+    a.velocity = a.velocity - impulse * a.inv_mass;
+    b.velocity = b.velocity + impulse * b.inv_mass;
 }
 
 pub fn circle_vs_line(circle: &Circle, line: &Line) -> CollisionResult {
-    let line_vec = line.p2.sub(line.p1);
+    let line_vec = line.p2 - line.p1;
     let line_length = line_vec.length();
     let line_dir = line_vec.normalize();
 
     // Project circle center onto line
-    let to_circle = circle.position.sub(line.p1);
+    let to_circle = circle.position - line.p1;
     let projection = to_circle.dot(line_dir);
 
     let closest_point = if projection <= 0.0 {
@@ -88,7 +88,7 @@ pub fn circle_vs_line(circle: &Circle, line: &Line) -> CollisionResult {
     } else if projection >= line_length {
         line.p2
     } else {
-        line.p1.add(line_dir.mul(projection))
+        line.p1 + line_dir * projection
     };
 
     let dist = circle.position.distance(closest_point);
@@ -97,7 +97,7 @@ pub fn circle_vs_line(circle: &Circle, line: &Line) -> CollisionResult {
         return CollisionResult::default();
     }
 
-    let normal = circle.position.sub(closest_point).normalize();
+    let normal = (circle.position - closest_point).normalize();
     let penetration = circle.radius - dist;
 
     CollisionResult {
@@ -113,9 +113,7 @@ pub fn resolve_circle_vs_line(circle: &mut Circle, line: &Line, result: &Collisi
     }
 
     // Separate circle from line with a small buffer
-    circle.position = circle
-        .position
-        .add(result.normal.mul(result.penetration + SEPARATION_BUFFER));
+    circle.position = circle.position + result.normal * (result.penetration + SEPARATION_BUFFER);
 
     // Reflect velocity
     let velocity_along_normal = circle.velocity.dot(result.normal);
@@ -128,7 +126,7 @@ pub fn resolve_circle_vs_line(circle: &mut Circle, line: &Line, result: &Collisi
     let e = circle.restitution.min(line.restitution);
     let impulse = -(1.0 + e) * velocity_along_normal;
 
-    circle.velocity = circle.velocity.add(result.normal.mul(impulse));
+    circle.velocity = circle.velocity + result.normal * impulse;
 }
 
 #[cfg(test)]

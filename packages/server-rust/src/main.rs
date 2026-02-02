@@ -90,14 +90,14 @@ async fn handle_request(
     }
 
     // Health check endpoint
-    if req.uri().path() == "/" || req.uri().path() == "/health" {
-        if req.method() == hyper::Method::GET {
-            println!("Health check from {}", addr);
-            return Ok(Response::builder()
-                .status(StatusCode::OK)
-                .body(Full::new(Bytes::from("OK")))
-                .unwrap());
-        }
+    if (req.uri().path() == "/" || req.uri().path() == "/health")
+        && req.method() == hyper::Method::GET
+    {
+        println!("Health check from {}", addr);
+        return Ok(Response::builder()
+            .status(StatusCode::OK)
+            .body(Full::new(Bytes::from("OK")))
+            .unwrap());
     }
 
     // Not found

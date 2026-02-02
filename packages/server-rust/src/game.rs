@@ -104,7 +104,7 @@ impl Game {
         self.players.insert(id.clone(), player);
 
         // Start game if we have at least 1 player
-        if self.players.len() >= 1 && self.status == GameStatus::Waiting {
+        if !self.players.is_empty() && self.status == GameStatus::Waiting {
             self.status = GameStatus::Playing;
         }
 
@@ -219,16 +219,16 @@ impl Game {
         let ball_pos = ball.position;
         let ball_radius = ball.radius;
 
-        let to_ball = ball_pos.sub(player_pos);
+        let to_ball = ball_pos - player_pos;
         let dist = to_ball.length();
         let kick_range = player_radius + ball_radius + KICK_DISTANCE;
 
         if dist <= kick_range && dist > 0.0 {
             let kick_dir = to_ball.normalize();
-            let kick_impulse = kick_dir.mul(KICK_FORCE);
+            let kick_impulse = kick_dir * KICK_FORCE;
 
             let ball = &mut self.world.circles[self.ball_index];
-            ball.velocity = ball.velocity.add(kick_impulse);
+            ball.velocity = ball.velocity + kick_impulse;
         }
     }
 

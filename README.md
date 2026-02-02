@@ -7,7 +7,6 @@ Open-source HaxBall implementation with Rust WebSocket server and TypeScript cli
 ```
 packages/
 ├── server-rust/    # Rust WebSocket server with physics engine
-├── server/         # TypeScript server (legacy/reference)
 ├── client/         # Browser client with rendering
 └── shared/         # Shared TypeScript game logic
 ```
@@ -19,21 +18,27 @@ packages/
 
 ## Quick Start
 
-### Run Rust Server
-
 ```bash
-cd packages/server-rust
-cargo run --release
+# Install dependencies
+npm install
+
+# Run both server and client
+npm run dev
 ```
 
-Server runs on `ws://127.0.0.1:8080`
+The Rust server runs on `ws://127.0.0.1:3001` and the client dev server runs on `http://localhost:8080`.
 
-### Run Client
+### Run Components Separately
 
+**Server only:**
 ```bash
-npm install
-cd packages/client
-npm run dev
+npm run dev:server
+# Or directly: cd packages/server-rust && cargo run
+```
+
+**Client only:**
+```bash
+npm run dev:client
 ```
 
 ## Features

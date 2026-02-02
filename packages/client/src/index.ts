@@ -112,10 +112,9 @@ function init(): void {
   // Get player name
   const playerName = prompt('Enter your name:') || `Player${Math.floor(Math.random() * 1000)}`;
 
-  // Check for server selection via URL params
+  // Check for custom server via URL params
   const params = new URLSearchParams(window.location.search);
   const customServer = params.get('server');
-  const useRust = params.get('rust') === 'true';
 
   // Determine server URL based on environment
   let serverUrl: string;
@@ -126,9 +125,9 @@ function init(): void {
     serverUrl = customServer.startsWith('ws') ? customServer : `wss://${customServer}`;
     serverType = 'Custom';
   } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    // Local development
-    const port = useRust ? 3001 : 3000;
-    serverType = useRust ? 'Rust' : 'TypeScript';
+    // Local development - always use Rust server
+    const port = 3001;
+    serverType = 'Rust';
     serverUrl = `ws://${window.location.hostname}:${port}`;
   } else {
     // Production - connect to fly.io (https://open-haxball.fly.dev)
@@ -142,7 +141,7 @@ function init(): void {
   const serverDisplay = document.getElementById('server-display');
   if (serverDisplay) {
     serverDisplay.textContent = `Server: ${serverType}`;
-    serverDisplay.style.color = useRust ? '#f39c12' : '#9b59b6';
+    serverDisplay.style.color = '#4ecca3';  // Green for Rust
   }
 
   const client = new GameClient(canvas, serverUrl, playerName);

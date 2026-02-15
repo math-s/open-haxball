@@ -52,11 +52,12 @@ class GameClient {
     });
 
     // Start input handling
+    const gameContainer = document.querySelector('.game-container') as HTMLElement;
     this.inputHandler.start((input) => {
       if (this.joined) {
         this.network.sendInput(input);
       }
-    });
+    }, gameContainer);
 
     // Wait a bit for connection, then join
     setTimeout(() => {

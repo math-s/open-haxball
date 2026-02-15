@@ -116,7 +116,10 @@ pub struct SerializedGameState {
     pub match_time_remaining: Option<f32>,
     #[serde(rename = "isHost")]
     pub is_host: bool,
-    #[serde(rename = "intermissionTimeRemaining", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "intermissionTimeRemaining",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub intermission_time_remaining: Option<f32>,
 }
 

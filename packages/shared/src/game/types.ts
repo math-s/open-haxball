@@ -81,6 +81,7 @@ export function serializeGameState(state: GameState): SerializedGameState {
     score: { ...state.score },
     status: state.status,
     lastGoalTeam: state.lastGoalTeam,
+    isHost: false,
   };
 }
 

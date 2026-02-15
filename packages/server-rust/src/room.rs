@@ -255,8 +255,8 @@ impl Room {
 
         // Send state to each client with their is_host status
         for (client_id, client) in &self.clients {
-            let is_host = client.player_id.as_ref() == host_id.as_ref()
-                && client.player_id.is_some();
+            let is_host =
+                client.player_id.as_ref() == host_id.as_ref() && client.player_id.is_some();
             let state = self.game.serialize_state(is_host);
             self.send(*client_id, ServerMessage::State(state));
         }

@@ -18,7 +18,7 @@ const BALL_MASS: f32 = 0.5;
 const BALL_FRICTION: f32 = 0.99;
 const BALL_RESTITUTION: f32 = 0.8;
 
-const KICK_DISTANCE: f32 = 30.0;
+const KICK_DISTANCE: f32 = 25.0;
 const KICK_FORCE: f32 = 500.0;
 
 const GOAL_RESET_TIME: f32 = 2.0;

@@ -271,7 +271,7 @@ fn test_kick_exact_edge_of_range() {
 
     // Position player at exact kick range (plus a tiny bit inside)
     let ball_pos = game.world.circles[game.ball_index].position;
-    let kick_range = player_radius + ball_radius + 30.0; // KICK_DISTANCE = 30.0
+    let kick_range = player_radius + ball_radius + 25.0; // KICK_DISTANCE = 25.0
     game.world.circles[player_idx].position = Vec2::new(ball_pos.x - kick_range + 0.1, ball_pos.y);
 
     game.set_player_input(player_id, InputBuilder::new().kick().build());

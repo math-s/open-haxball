@@ -1,3 +1,5 @@
+# 🎉 Play with your friends [here](https://math-s.github.io/open-haxball/) 🎉
+
 # Open HaxBall
 
 Open-source HaxBall implementation with Rust WebSocket server and TypeScript client.

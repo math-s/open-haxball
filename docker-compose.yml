@@ -1,0 +1,15 @@
+services:
+  server:
+    build:
+      context: ./packages/server-rust
+    ports:
+      - "3001:3001"
+
+  client:
+    build:
+      context: .
+      dockerfile: packages/client/Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - server

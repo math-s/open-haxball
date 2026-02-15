@@ -3,6 +3,7 @@
 Open-source HaxBall implementation with Rust WebSocket server and TypeScript client.
 
 ## Structure
+<img width="840" height="558" alt="image" src="https://github.com/user-attachments/assets/10f1c07f-de7e-4124-a399-f1889fec7556" />
 
 ```
 packages/

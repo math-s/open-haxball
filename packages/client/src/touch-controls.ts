@@ -33,6 +33,8 @@ export class TouchControls {
   private handleTouchStart: (e: TouchEvent) => void;
   private handleTouchMove: (e: TouchEvent) => void;
   private handleTouchEnd: (e: TouchEvent) => void;
+  private mediaQuery: MediaQueryList;
+  private handleMediaChange: (e: MediaQueryListEvent) => void;
 
   constructor(gameContainer: HTMLElement, callback: TouchInputCallback) {
     this.callback = callback;
@@ -116,6 +118,22 @@ export class TouchControls {
     document.addEventListener('touchmove', this.handleTouchMove, { passive: false });
     document.addEventListener('touchend', this.handleTouchEnd, { passive: false });
     document.addEventListener('touchcancel', this.handleTouchEnd, { passive: false });
+
+    // Reactively show/hide when device mode changes (e.g. DevTools toggle)
+    this.mediaQuery = matchMedia('(pointer: coarse)');
+    this.handleMediaChange = (e) => {
+      if (e.matches) {
+        this.show();
+      } else {
+        this.hide();
+      }
+    };
+    this.mediaQuery.addEventListener('change', this.handleMediaChange);
+
+    // Set initial visibility
+    if (!isTouchDevice()) {
+      this.hide();
+    }
   }
 
   show(): void {
@@ -124,9 +142,21 @@ export class TouchControls {
 
   hide(): void {
     this.container.style.display = 'none';
+    // Reset any active touches
+    if (this.joystickTouchId !== null) {
+      this.joystickTouchId = null;
+      this.resetJoystickThumb();
+      this.callback.onDirectionChange(false, false, false, false);
+    }
+    if (this.kickTouchId !== null) {
+      this.kickTouchId = null;
+      this.kickButton.style.background = 'rgba(78,204,163,0.3)';
+      this.callback.onKickChange(false);
+    }
   }
 
   destroy(): void {
+    this.mediaQuery.removeEventListener('change', this.handleMediaChange);
     document.removeEventListener('touchstart', this.handleTouchStart);
     document.removeEventListener('touchmove', this.handleTouchMove);
     document.removeEventListener('touchend', this.handleTouchEnd);

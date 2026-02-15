@@ -1,5 +1,5 @@
 import { InputState, createEmptyInput } from '@open-haxball/shared';
-import { TouchControls, isTouchDevice } from './touch-controls.js';
+import { TouchControls } from './touch-controls.js';
 
 export class InputHandler {
   private state: InputState = createEmptyInput();
@@ -16,7 +16,7 @@ export class InputHandler {
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
 
-    if (isTouchDevice() && gameContainer) {
+    if (gameContainer) {
       this.touchControls = new TouchControls(gameContainer, {
         onDirectionChange: (left, right, up, down) => {
           const changed =
@@ -39,7 +39,6 @@ export class InputHandler {
           }
         },
       });
-      this.touchControls.show();
     }
   }
 

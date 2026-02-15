@@ -253,7 +253,7 @@ fn test_serialize_state_after_multiple_updates() {
 
     simulate_ticks(&mut game, 60);
 
-    let state = game.serialize_state();
+    let state = game.serialize_state(false);
 
     assert_eq!(state.players.len(), 4);
     assert_eq!(state.status, GameStatus::Playing);

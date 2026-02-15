@@ -2,23 +2,37 @@ import { SerializedGameState, Team } from '@open-haxball/shared';
 import { Renderer } from './renderer.js';
 import { InputHandler } from './input.js';
 import { NetworkClient } from './network.js';
+import { Chat } from './chat.js';
 
 class GameClient {
   private renderer: Renderer;
   private inputHandler: InputHandler;
   private network: NetworkClient;
+  private chat: Chat;
 
   private gameState: SerializedGameState | null = null;
   private localPlayerId: string | null = null;
   private localTeam: Team | null = null;
   private playerName: string;
   private joined = false;
+  private isHost = false;
+  private matchTimeRemaining: number | null = null;
 
   constructor(canvas: HTMLCanvasElement, serverUrl: string, playerName: string) {
     this.renderer = new Renderer(canvas);
     this.inputHandler = new InputHandler();
     this.network = new NetworkClient(serverUrl);
     this.playerName = playerName;
+
+    // Initialize chat with callback to send messages and get player team
+    this.chat = new Chat(
+      (text: string) => {
+        if (this.joined) {
+          this.network.sendChat(text);
+        }
+      },
+      (playerId: string) => this.getPlayerTeam(playerId)
+    );
   }
 
   start(): void {
@@ -33,6 +47,15 @@ class GameClient {
       },
       onState: (state) => {
         this.gameState = state;
+        this.isHost = state.isHost;
+        this.matchTimeRemaining = state.matchTimeRemaining ?? null;
+
+        // Debug log when status changes to finished
+        if (state.status === 'finished' && this.gameState?.status !== 'finished') {
+          console.log('Match finished!', { isHost: state.isHost });
+        }
+
+        this.updateMatchUI();
       },
       onPlayerJoined: (playerId, name, team) => {
         console.log(`${name} joined team ${team}`);
@@ -49,6 +72,9 @@ class GameClient {
         this.joined = false;
         this.updateUI();
       },
+      onChat: (playerId, name, text) => {
+        this.chat.addMessage(playerId, name, text);
+      },
     });
 
     // Start input handling
@@ -58,6 +84,39 @@ class GameClient {
         this.network.sendInput(input);
       }
     }, gameContainer);
+
+    // Team switch button
+    const teamSwitchBtn = document.getElementById('team-switch-btn');
+    if (teamSwitchBtn) {
+      teamSwitchBtn.addEventListener('click', () => {
+        if (!this.joined || !this.localTeam) return;
+
+        const newTeam: Team = this.localTeam === 'red' ? 'blue' : 'red';
+        const teamName = newTeam === 'red' ? 'RED' : 'BLUE';
+
+        if (confirm(`Switch to ${teamName} team?`)) {
+          this.network.switchTeam(newTeam);
+          this.localTeam = newTeam; // Optimistic update
+          this.updateUI();
+        }
+      });
+    }
+
+    // Restart match button
+    const restartBtn = document.getElementById('restart-match-btn');
+    if (restartBtn) {
+      restartBtn.addEventListener('click', () => {
+        console.log('Restart button clicked', { isHost: this.isHost, status: this.gameState?.status });
+        if (!this.isHost) {
+          console.warn('Not the host, cannot restart');
+          return;
+        }
+        if (confirm('Restart the match?')) {
+          console.log('Sending restart match command');
+          this.network.restartMatch();
+        }
+      });
+    }
 
     // Wait a bit for connection, then join
     setTimeout(() => {
@@ -94,11 +153,56 @@ class GameClient {
         teamDisplay.style.color = '#ffffff';
       }
     }
+
+    // Update team switch button state
+    const teamSwitchBtn = document.getElementById('team-switch-btn') as HTMLButtonElement;
+    if (teamSwitchBtn) {
+      teamSwitchBtn.disabled = !this.joined;
+    }
+  }
+
+  private updateMatchUI(): void {
+    // Update timer
+    const timerEl = document.getElementById('match-timer');
+    if (timerEl && this.matchTimeRemaining !== null) {
+      const minutes = Math.floor(this.matchTimeRemaining / 60);
+      const seconds = Math.floor(this.matchTimeRemaining % 60);
+      timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+      // Color based on time remaining
+      if (this.matchTimeRemaining < 30) {
+        timerEl.style.color = '#e74c3c'; // Red
+      } else if (this.matchTimeRemaining < 60) {
+        timerEl.style.color = '#f39c12'; // Orange
+      } else {
+        timerEl.style.color = '#4ecca3'; // Green
+      }
+    } else if (timerEl) {
+      timerEl.textContent = '--:--';
+      timerEl.style.color = '#888';
+    }
+
+    // Show/hide restart button (host can restart early during intermission)
+    const restartBtn = document.getElementById('restart-match-btn') as HTMLButtonElement;
+    if (restartBtn) {
+      const showRestart = this.isHost && this.gameState?.status === 'finished';
+      restartBtn.style.display = showRestart ? 'block' : 'none';
+      if (showRestart) {
+        restartBtn.textContent = 'Restart Now';
+      }
+    }
+  }
+
+  private getPlayerTeam(playerId: string): Team | null {
+    if (!this.gameState) return null;
+    const player = this.gameState.players.find((p) => p.id === playerId);
+    return player ? player.team : null;
   }
 
   stop(): void {
     this.inputHandler.stop();
     this.network.disconnect();
+    this.chat.destroy();
   }
 }
 

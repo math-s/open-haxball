@@ -4,6 +4,7 @@ use crate::map::GameMap;
 use crate::physics::{Circle, PhysicsWorld, Vec2};
 use crate::protocol::{
     GameStatus, InputState, Score, SerializedBall, SerializedGameState, SerializedPlayer, Team,
+    INTERMISSION_DURATION, MATCH_DURATION,
 };
 
 // Game constants
@@ -39,6 +40,8 @@ pub struct Game {
     pub status: GameStatus,
     pub last_goal_team: Option<Team>,
     pub goal_timer: f32,
+    pub match_timer: f32,
+    pub intermission_timer: f32,
     pub map: GameMap,
 }
 
@@ -71,6 +74,8 @@ impl Game {
             status: GameStatus::Waiting,
             last_goal_team: None,
             goal_timer: 0.0,
+            match_timer: MATCH_DURATION,
+            intermission_timer: 0.0,
             map,
         }
     }
@@ -153,7 +158,19 @@ impl Game {
             return;
         }
 
-        if self.status != GameStatus::Playing {
+        // Handle intermission timer (gameplay continues during intermission)
+        if self.status == GameStatus::Finished {
+            self.intermission_timer -= dt;
+
+            // Auto-restart match after intermission ends
+            if self.intermission_timer <= 0.0 {
+                self.restart_match();
+                return;
+            }
+            // Continue with normal gameplay (don't return early)
+        }
+
+        if self.status != GameStatus::Playing && self.status != GameStatus::Finished {
             return;
         }
 
@@ -171,8 +188,17 @@ impl Game {
         // Step physics
         self.world.step(dt);
 
-        // Check for goals
-        self.check_goals();
+        // Check for goals (only during Playing status)
+        if self.status == GameStatus::Playing {
+            self.check_goals();
+
+            // Update match timer
+            self.match_timer -= dt;
+            if self.match_timer <= 0.0 {
+                self.status = GameStatus::Finished;
+                self.intermission_timer = INTERMISSION_DURATION;
+            }
+        }
     }
 
     fn process_player_input(&mut self, circle_index: usize, input: InputState, dt: f32) {
@@ -284,6 +310,29 @@ impl Game {
         }
     }
 
+    pub fn switch_player_team(&mut self, player_id: &str, new_team: Team) {
+        if let Some(player) = self.players.get_mut(player_id) {
+            player.team = new_team;
+            // Respawn at new team's first spawn point
+            let spawns = match new_team {
+                Team::Red => &self.map.red_spawns,
+                Team::Blue => &self.map.blue_spawns,
+            };
+            let spawn = spawns[0];
+            let circle = &mut self.world.circles[player.circle_index];
+            circle.position = spawn;
+            circle.velocity = Vec2::default();
+        }
+    }
+
+    pub fn restart_match(&mut self) {
+        self.score = Score::default();
+        self.match_timer = MATCH_DURATION;
+        self.intermission_timer = 0.0;
+        self.status = GameStatus::Playing;
+        self.reset_positions();
+    }
+
     pub fn get_auto_team(&self) -> Team {
         let mut red_count = 0;
         let mut blue_count = 0;
@@ -302,7 +351,7 @@ impl Game {
         }
     }
 
-    pub fn serialize_state(&self) -> SerializedGameState {
+    pub fn serialize_state(&self, is_host: bool) -> SerializedGameState {
         let players: Vec<SerializedPlayer> = self
             .players
             .values()
@@ -321,6 +370,17 @@ impl Game {
 
         let ball = &self.world.circles[self.ball_index];
 
+        let match_time_remaining = match self.status {
+            GameStatus::Waiting => None,
+            _ => Some(self.match_timer.max(0.0)),
+        };
+
+        let intermission_time_remaining = if self.status == GameStatus::Finished {
+            Some(self.intermission_timer.max(0.0))
+        } else {
+            None
+        };
+
         SerializedGameState {
             players,
             ball: SerializedBall {
@@ -331,6 +391,9 @@ impl Game {
             score: self.score.clone(),
             status: self.status,
             last_goal_team: self.last_goal_team,
+            match_time_remaining,
+            is_host,
+            intermission_time_remaining,
         }
     }
 }
@@ -651,7 +714,7 @@ mod tests {
         let mut game = Game::new();
         game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
 
-        let state = game.serialize_state();
+        let state = game.serialize_state(false);
 
         assert_eq!(state.players.len(), 1);
         assert_eq!(state.players[0].id, "p1");
@@ -659,15 +722,19 @@ mod tests {
         assert_eq!(state.score.red, 0);
         assert_eq!(state.score.blue, 0);
         assert_eq!(state.status, GameStatus::Playing);
+        assert!(state.match_time_remaining.is_some());
+        assert!(!state.is_host);
     }
 
     #[test]
     fn test_serialize_state_empty_game() {
         let game = Game::new();
-        let state = game.serialize_state();
+        let state = game.serialize_state(true);
 
         assert!(state.players.is_empty());
         assert_eq!(state.status, GameStatus::Waiting);
+        assert!(state.match_time_remaining.is_none());
+        assert!(state.is_host);
     }
 
     // Diagonal movement tests
@@ -696,5 +763,200 @@ mod tests {
         // (both x and y should be scaled)
         assert!(vel.x.abs() < 10.0); // Reasonable single-frame acceleration
         assert!(vel.y.abs() < 10.0);
+    }
+
+    // Match system tests
+    #[test]
+    fn test_match_timer_counts_down() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        let initial_time = game.match_timer;
+        game.update(0.016);
+
+        assert!(game.match_timer < initial_time);
+        assert_eq!(game.status, GameStatus::Playing);
+    }
+
+    #[test]
+    fn test_match_ends_at_zero() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        // Set timer close to zero
+        game.match_timer = 0.01;
+        game.update(0.016);
+
+        assert_eq!(game.status, GameStatus::Finished);
+        assert!(game.intermission_timer > 0.0);
+    }
+
+    #[test]
+    fn test_intermission_timer_counts_down() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        // Force to finished state
+        game.status = GameStatus::Finished;
+        game.intermission_timer = 5.0;
+
+        game.update(0.016);
+
+        assert!(game.intermission_timer < 5.0);
+        assert_eq!(game.status, GameStatus::Finished);
+    }
+
+    #[test]
+    fn test_auto_restart_after_intermission() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+        game.score.red = 3;
+        game.score.blue = 2;
+
+        // Force to finished state with low intermission timer
+        game.status = GameStatus::Finished;
+        game.intermission_timer = 0.01;
+
+        game.update(0.016);
+
+        // Should auto-restart
+        assert_eq!(game.status, GameStatus::Playing);
+        assert_eq!(game.score.red, 0);
+        assert_eq!(game.score.blue, 0);
+        assert_eq!(game.match_timer, MATCH_DURATION);
+    }
+
+    #[test]
+    fn test_gameplay_continues_during_intermission() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        // Force to finished state
+        game.status = GameStatus::Finished;
+        game.intermission_timer = 3.0;
+
+        // Set player input
+        game.set_player_input(
+            "p1",
+            InputState {
+                left: false,
+                right: true,
+                up: false,
+                down: false,
+                kick: false,
+            },
+        );
+
+        let player_idx = game.players.get("p1").unwrap().circle_index;
+        let vel_before = game.world.circles[player_idx].velocity;
+
+        game.update(0.016);
+
+        let vel_after = game.world.circles[player_idx].velocity;
+
+        // Player should still be able to move during intermission
+        assert!(vel_after.x > vel_before.x);
+        assert_eq!(game.status, GameStatus::Finished);
+    }
+
+    #[test]
+    fn test_restart_match() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+        game.score.red = 5;
+        game.score.blue = 3;
+        game.match_timer = 30.0;
+        game.status = GameStatus::Finished;
+
+        game.restart_match();
+
+        assert_eq!(game.score.red, 0);
+        assert_eq!(game.score.blue, 0);
+        assert_eq!(game.match_timer, MATCH_DURATION);
+        assert_eq!(game.intermission_timer, 0.0);
+        assert_eq!(game.status, GameStatus::Playing);
+    }
+
+    #[test]
+    fn test_switch_player_team() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        let player_idx = game.players.get("p1").unwrap().circle_index;
+        let red_spawn = game.map.red_spawns[0];
+        let blue_spawn = game.map.blue_spawns[0];
+
+        // Verify player spawned at red spawn
+        let pos = game.world.circles[player_idx].position;
+        assert_eq!(pos.x, red_spawn.x);
+        assert_eq!(pos.y, red_spawn.y);
+
+        // Switch to blue team
+        game.switch_player_team("p1", Team::Blue);
+
+        // Verify player team changed
+        assert_eq!(game.players.get("p1").unwrap().team, Team::Blue);
+
+        // Verify player respawned at blue spawn
+        let pos = game.world.circles[player_idx].position;
+        assert_eq!(pos.x, blue_spawn.x);
+        assert_eq!(pos.y, blue_spawn.y);
+
+        // Verify velocity reset
+        let vel = game.world.circles[player_idx].velocity;
+        assert_eq!(vel.x, 0.0);
+        assert_eq!(vel.y, 0.0);
+    }
+
+    #[test]
+    fn test_match_timer_doesnt_count_during_goal() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+
+        game.status = GameStatus::Goal;
+        game.goal_timer = 2.0;
+        let timer_before = game.match_timer;
+
+        game.update(0.016);
+
+        // Match timer should not decrease during goal celebration
+        assert_eq!(game.match_timer, timer_before);
+    }
+
+    #[test]
+    fn test_serialize_state_includes_match_timer() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+        game.match_timer = 120.5;
+
+        let state = game.serialize_state(false);
+
+        assert_eq!(state.match_time_remaining, Some(120.5));
+        assert!(!state.is_host);
+        assert_eq!(state.intermission_time_remaining, None);
+    }
+
+    #[test]
+    fn test_serialize_state_includes_intermission_timer() {
+        let mut game = Game::new();
+        game.add_player("p1".to_string(), "Player1".to_string(), Team::Red);
+        game.status = GameStatus::Finished;
+        game.match_timer = 0.0;
+        game.intermission_timer = 3.5;
+
+        let state = game.serialize_state(true);
+
+        assert_eq!(state.match_time_remaining, Some(0.0));
+        assert!(state.is_host);
+        assert_eq!(state.intermission_time_remaining, Some(3.5));
+    }
+
+    #[test]
+    fn test_waiting_state_has_no_match_timer() {
+        let game = Game::new();
+        let state = game.serialize_state(false);
+
+        assert_eq!(state.match_time_remaining, None);
+        assert_eq!(state.status, GameStatus::Waiting);
     }
 }

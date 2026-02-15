@@ -5,7 +5,7 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::game::Game;
 use crate::physics::world::PHYSICS_DT;
-use crate::protocol::{ClientMessage, InputState, ServerMessage};
+use crate::protocol::{ClientMessage, InputState, ServerMessage, Team};
 
 // Kick players after 5 minutes of no input
 const IDLE_TIMEOUT_SECS: u64 = 300;
@@ -14,6 +14,7 @@ pub struct Client {
     pub sender: UnboundedSender<String>,
     pub player_id: Option<String>,
     pub last_activity: Instant,
+    pub join_timestamp: Instant,
 }
 
 pub struct Room {
@@ -37,12 +38,14 @@ impl Room {
         let client_id = self.next_client_id;
         self.next_client_id += 1;
 
+        let now = Instant::now();
         self.clients.insert(
             client_id,
             Client {
                 sender,
                 player_id: None,
-                last_activity: Instant::now(),
+                last_activity: now,
+                join_timestamp: now,
             },
         );
 
@@ -78,6 +81,9 @@ impl Room {
         match message {
             ClientMessage::Join { name } => self.handle_join(client_id, name),
             ClientMessage::Input(input) => self.handle_input(client_id, input),
+            ClientMessage::Chat { text } => self.handle_chat(client_id, text),
+            ClientMessage::SwitchTeam { team } => self.handle_switch_team(client_id, team),
+            ClientMessage::RestartMatch => self.handle_restart_match(client_id),
         }
     }
 
@@ -144,6 +150,86 @@ impl Room {
         }
     }
 
+    fn handle_chat(&mut self, client_id: usize, text: String) {
+        // Update last activity
+        let player_id = match self.clients.get_mut(&client_id) {
+            Some(c) => {
+                c.last_activity = Instant::now();
+                c.player_id.clone()
+            }
+            None => return,
+        };
+
+        // Look up player info
+        let (player_id, name) = match player_id {
+            Some(pid) => match self.game.players.get(&pid) {
+                Some(player) => (pid, player.name.clone()),
+                None => return,
+            },
+            None => return,
+        };
+
+        // Truncate text to 200 chars
+        let text: String = text.chars().take(200).collect();
+
+        // Broadcast to all clients
+        self.broadcast(
+            ServerMessage::Chat {
+                player_id,
+                name,
+                text,
+            },
+            None,
+        );
+    }
+
+    fn handle_switch_team(&mut self, client_id: usize, team: Team) {
+        let player_id = match self.clients.get_mut(&client_id) {
+            Some(c) => {
+                c.last_activity = Instant::now();
+                c.player_id.clone()
+            }
+            None => return,
+        };
+
+        if let Some(pid) = player_id {
+            self.game.switch_player_team(&pid, team);
+        }
+    }
+
+    fn handle_restart_match(&mut self, client_id: usize) {
+        // Update last activity and get player ID
+        let player_id = match self.clients.get_mut(&client_id) {
+            Some(c) => {
+                c.last_activity = Instant::now();
+                c.player_id.clone()
+            }
+            None => return,
+        };
+
+        // Verify player is host
+        let host_id = self.get_host_player_id();
+        if player_id.as_ref() != host_id.as_ref() {
+            self.send(
+                client_id,
+                ServerMessage::Error {
+                    message: "Only the host can restart the match".to_string(),
+                },
+            );
+            return;
+        }
+
+        self.game.restart_match();
+    }
+
+    fn get_host_player_id(&self) -> Option<String> {
+        self.clients
+            .values()
+            .filter(|c| c.player_id.is_some())
+            .min_by_key(|c| c.join_timestamp)
+            .and_then(|c| c.player_id.clone())
+    }
+
     pub fn tick(&mut self) {
         // Check for idle players and collect IDs to remove
         let idle_clients: Vec<usize> = self
@@ -164,9 +250,16 @@ impl Room {
 
         self.game.update(PHYSICS_DT);
 
-        // Broadcast state to all clients
-        let state = self.game.serialize_state();
-        self.broadcast(ServerMessage::State(state), None);
+        // Get host player ID
+        let host_id = self.get_host_player_id();
+
+        // Send state to each client with their is_host status
+        for (client_id, client) in &self.clients {
+            let is_host = client.player_id.as_ref() == host_id.as_ref()
+                && client.player_id.is_some();
+            let state = self.game.serialize_state(is_host);
+            self.send(*client_id, ServerMessage::State(state));
+        }
     }
 
     fn send(&self, client_id: usize, message: ServerMessage) {

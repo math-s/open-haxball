@@ -5,11 +5,15 @@ type ServerMessage =
   | { type: 'state'; data: SerializedGameState }
   | { type: 'playerJoined'; data: { playerId: string; name: string; team: Team } }
   | { type: 'playerLeft'; data: { playerId: string } }
-  | { type: 'error'; data: { message: string } };
+  | { type: 'error'; data: { message: string } }
+  | { type: 'chat'; data: { playerId: string; name: string; text: string } };
 
 type ClientMessage =
   | { type: 'join'; data: { name: string } }
-  | { type: 'input'; data: InputState };
+  | { type: 'input'; data: InputState }
+  | { type: 'chat'; data: { text: string } }
+  | { type: 'switchTeam'; data: { team: Team } }
+  | { type: 'restartMatch'; data: {} };
 
 export interface NetworkCallbacks {
   onJoined: (playerId: string, team: Team) => void;
@@ -18,6 +22,7 @@ export interface NetworkCallbacks {
   onPlayerLeft: (playerId: string) => void;
   onError: (message: string) => void;
   onDisconnect: () => void;
+  onChat: (playerId: string, name: string, text: string) => void;
 }
 
 export class NetworkClient {
@@ -102,6 +107,13 @@ export class NetworkClient {
       case 'error':
         this.callbacks.onError(message.data.message);
         break;
+      case 'chat':
+        this.callbacks.onChat(
+          message.data.playerId,
+          message.data.name,
+          message.data.text
+        );
+        break;
     }
   }
 
@@ -117,6 +129,18 @@ export class NetworkClient {
 
   sendInput(input: InputState): void {
     this.send({ type: 'input', data: input });
+  }
+
+  sendChat(text: string): void {
+    this.send({ type: 'chat', data: { text } });
+  }
+
+  switchTeam(team: Team): void {
+    this.send({ type: 'switchTeam', data: { team } });
+  }
+
+  restartMatch(): void {
+    this.send({ type: 'restartMatch', data: {} });
   }
 
   disconnect(): void {

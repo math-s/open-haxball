@@ -64,6 +64,9 @@ fn test_server_message_state_serialization() {
         score: Score { red: 2, blue: 1 },
         status: GameStatus::Playing,
         last_goal_team: Some(Team::Red),
+        match_time_remaining: Some(120.0),
+        is_host: false,
+        intermission_time_remaining: None,
     };
 
     let msg = ServerMessage::State(state);
@@ -237,6 +240,9 @@ fn test_serialized_game_state_with_no_players() {
         score: Score { red: 0, blue: 0 },
         status: GameStatus::Waiting,
         last_goal_team: None,
+        match_time_remaining: None,
+        is_host: true,
+        intermission_time_remaining: None,
     };
 
     let msg = ServerMessage::State(state);

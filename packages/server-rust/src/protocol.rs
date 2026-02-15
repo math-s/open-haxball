@@ -32,6 +32,10 @@ pub struct Score {
     pub blue: u32,
 }
 
+// Match constants
+pub const MATCH_DURATION: f32 = 180.0; // 3 minutes in seconds
+pub const INTERMISSION_DURATION: f32 = 5.0; // 5 seconds
+
 // Client -> Server messages
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", content = "data")]
@@ -40,6 +44,12 @@ pub enum ClientMessage {
     Join { name: String },
     #[serde(rename = "input")]
     Input(InputState),
+    #[serde(rename = "chat")]
+    Chat { text: String },
+    #[serde(rename = "switchTeam")]
+    SwitchTeam { team: Team },
+    #[serde(rename = "restartMatch")]
+    RestartMatch,
 }
 
 // Server -> Client messages
@@ -68,6 +78,13 @@ pub enum ServerMessage {
     },
     #[serde(rename = "error")]
     Error { message: String },
+    #[serde(rename = "chat")]
+    Chat {
+        #[serde(rename = "playerId")]
+        player_id: String,
+        name: String,
+        text: String,
+    },
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -95,6 +112,12 @@ pub struct SerializedGameState {
     pub status: GameStatus,
     #[serde(rename = "lastGoalTeam")]
     pub last_goal_team: Option<Team>,
+    #[serde(rename = "matchTimeRemaining", skip_serializing_if = "Option::is_none")]
+    pub match_time_remaining: Option<f32>,
+    #[serde(rename = "isHost")]
+    pub is_host: bool,
+    #[serde(rename = "intermissionTimeRemaining", skip_serializing_if = "Option::is_none")]
+    pub intermission_time_remaining: Option<f32>,
 }
 
 #[cfg(test)]
@@ -286,6 +309,9 @@ mod tests {
             score: Score { red: 1, blue: 2 },
             status: GameStatus::Playing,
             last_goal_team: Some(Team::Blue),
+            match_time_remaining: Some(120.0),
+            is_host: true,
+            intermission_time_remaining: None,
         };
         let msg = ServerMessage::State(state);
         let json = serde_json::to_string(&msg).unwrap();
@@ -339,6 +365,32 @@ mod tests {
         let json = r#"{"type":"invalid","data":{}}"#;
         let result: Result<ClientMessage, _> = serde_json::from_str(json);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_client_message_chat_deserialize() {
+        let json = r#"{"type":"chat","data":{"text":"Hello world"}}"#;
+        let msg: ClientMessage = serde_json::from_str(json).unwrap();
+
+        match msg {
+            ClientMessage::Chat { text } => assert_eq!(text, "Hello world"),
+            _ => panic!("Expected Chat message"),
+        }
+    }
+
+    #[test]
+    fn test_server_message_chat_serialize() {
+        let msg = ServerMessage::Chat {
+            player_id: "player_1".to_string(),
+            name: "TestPlayer".to_string(),
+            text: "Hello everyone".to_string(),
+        };
+        let json = serde_json::to_string(&msg).unwrap();
+
+        assert!(json.contains("\"type\":\"chat\""));
+        assert!(json.contains("\"playerId\":\"player_1\""));
+        assert!(json.contains("\"name\":\"TestPlayer\""));
+        assert!(json.contains("\"text\":\"Hello everyone\""));
     }
 
     #[test]

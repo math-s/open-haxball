@@ -51,6 +51,11 @@ export class InputHandler {
   }
 
   private handleKeyDown(e: KeyboardEvent): void {
+    // Skip game input when chat input is focused
+    if (this.isInputFocused()) {
+      return;
+    }
+
     if (this.updateKey(e.key, true)) {
       e.preventDefault();
       this.notifyChange();
@@ -58,10 +63,23 @@ export class InputHandler {
   }
 
   private handleKeyUp(e: KeyboardEvent): void {
+    // Skip game input when chat input is focused
+    if (this.isInputFocused()) {
+      return;
+    }
+
     if (this.updateKey(e.key, false)) {
       e.preventDefault();
       this.notifyChange();
     }
+  }
+
+  private isInputFocused(): boolean {
+    const activeElement = document.activeElement;
+    return (
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement
+    );
   }
 
   private updateKey(key: string, pressed: boolean): boolean {

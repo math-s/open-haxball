@@ -39,7 +39,7 @@ export class Renderer {
       this.drawBall(state.ball);
       this.drawPlayers(state.players, localPlayerId);
       this.drawScore(state.score);
-      this.drawStatus(state.status, state.lastGoalTeam);
+      this.drawStatus(state.status, state.lastGoalTeam, state.intermissionTimeRemaining);
     } else {
       this.drawConnecting();
     }
@@ -166,7 +166,7 @@ export class Renderer {
     ctx.fillText(score.blue.toString(), width / 2 + 40, 40);
   }
 
-  private drawStatus(status: GameStatus, lastGoalTeam: Team | null): void {
+  private drawStatus(status: GameStatus, lastGoalTeam: Team | null, intermissionTimeRemaining?: number): void {
     const { ctx, width, height } = this;
 
     if (status === 'goal' && lastGoalTeam) {
@@ -189,6 +189,24 @@ export class Renderer {
       ctx.font = '24px Arial';
       ctx.textAlign = 'center';
       ctx.fillText('Waiting for players...', width / 2, height / 2);
+    } else if (status === 'finished') {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 48px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('MATCH ENDED', width / 2, height / 2 - 20);
+
+      // Show countdown if available
+      if (intermissionTimeRemaining !== undefined && intermissionTimeRemaining > 0) {
+        const seconds = Math.ceil(intermissionTimeRemaining);
+        ctx.font = '20px Arial';
+        ctx.fillText(`Next match in ${seconds}...`, width / 2, height / 2 + 30);
+      } else {
+        ctx.font = '20px Arial';
+        ctx.fillText('Restarting...', width / 2, height / 2 + 30);
+      }
     }
   }
 

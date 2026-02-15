@@ -53,6 +53,9 @@ export interface SerializedGameState {
   score: Score;
   status: GameStatus;
   lastGoalTeam: Team | null;
+  matchTimeRemaining?: number;
+  isHost: boolean;
+  intermissionTimeRemaining?: number;
 }
 
 export function serializeGameState(state: GameState): SerializedGameState {
